@@ -9,7 +9,7 @@ pub struct Buffer<T, const N: usize> {
     len: usize,
 }
 
-impl<T: Send + 'static, const N: usize> Buffer<T, N> {
+impl<T, const N: usize> Buffer<T, N> {
     /// Returning a new instance of a buffer.
     /// Need to specify type and size.
     ///
@@ -59,6 +59,16 @@ impl<T: Send + 'static, const N: usize> Buffer<T, N> {
 
 }
 
+impl<T, const N: usize> Drop for Buffer<T, N> {
+    fn drop(&mut self) {
+        unsafe {
+            let slice: *mut [T] =
+                std::ptr::slice_from_raw_parts_mut(self.data.as_mut_ptr().cast::<T>(), self.len);
+            slice.drop_in_place();
+        }
+    }
+}
+
 impl<T, const N: usize> IntoIterator for Buffer<T, N>{
     type Item = T;
 
@@ -88,6 +98,7 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
             &mut self.buffer.data[self.current_index],
             MaybeUninit::uninit(),
         );
+
         self.current_index += 1;
 
         // SAFETY: current_index is checked to be < len.
@@ -98,9 +109,8 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
 
 impl<T, const N: usize> Drop for IntoIter<T, N> {
     fn drop(&mut self) {
-        for item in self {
-            drop(item);
-        }
+        let buf = std::mem::replace(&mut self.buffer, Buffer::new());
+        drop(buf);
     }
 }
 #[derive(Debug, PartialEq, PartialOrd, Ord, Eq)]

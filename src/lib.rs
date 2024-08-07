@@ -15,6 +15,7 @@ pub struct Buffer<T, const N: usize> {
 }
 
 impl<T: Send + 'static, const N: usize> Buffer<T, N> {
+    const ARRAY_REPEAT_VALUE: MaybeUninit<T> = MaybeUninit::uninit();
     /// Returning a new instance of a buffer.
     /// Need to specify type and size.
     ///
@@ -28,8 +29,9 @@ impl<T: Send + 'static, const N: usize> Buffer<T, N> {
     /// buf.push(3);
     ///```
     pub fn new() -> Self {
+
         // SAFETY: Filling with unititialized data is Safe (i guess?)
-        let data = unsafe { MaybeUninit::uninit().assume_init() };
+        let data = [Self::ARRAY_REPEAT_VALUE; N];
 
         Self {
             data,

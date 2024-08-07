@@ -1,7 +1,5 @@
-//! the buffest buffer,
-//!
-//! Created with the intention of buffering items, and then consuming them in another thread.
-use std::{borrow::BorrowMut, mem::MaybeUninit};
+//! The buffest buffer,
+use std::mem::MaybeUninit;
 
 type Result<T, R> = std::result::Result<T, Error<R>>;
 
@@ -25,6 +23,7 @@ impl<T: Send + 'static, const N: usize> Buffer<T, N> {
     /// buf.push(2);
     /// buf.push(3);
     ///```
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         // SAFETY: Filling with unititialized data is Safe (i guess?)
         let data = [Self::ARRAY_REPEAT_VALUE; N];
@@ -100,8 +99,8 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
 
 impl<T, const N: usize> Drop for IntoIter<T, N> {
     fn drop(&mut self) {
-        while let Some(item) = self.next() {
-            drop(item)
+        for item in self {
+            drop(item);
         }
     }
 }

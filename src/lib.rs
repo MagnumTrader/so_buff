@@ -9,9 +9,6 @@ pub struct Buffer<T, const N: usize> {
     data: [MaybeUninit<T>; N],
     /// the current amount of items in the buffer
     len: usize,
-    /// this is only used when turned into an iterator
-    /// used to ensure drop safety
-    current_index: usize,
 }
 
 impl<T: Send + 'static, const N: usize> Buffer<T, N> {
@@ -29,15 +26,10 @@ impl<T: Send + 'static, const N: usize> Buffer<T, N> {
     /// buf.push(3);
     ///```
     pub fn new() -> Self {
-
         // SAFETY: Filling with unititialized data is Safe (i guess?)
         let data = [Self::ARRAY_REPEAT_VALUE; N];
 
-        Self {
-            data,
-            len: 0,
-            current_index: 0,
-        }
+        Self { data, len: 0 }
     }
 
     /// Pushes a value into the buffer.
@@ -67,35 +59,38 @@ impl<T: Send + 'static, const N: usize> Buffer<T, N> {
         Ok(())
     }
 
+}
+
+impl<T, const N: usize> IntoIterator for Buffer<T, N>{
+    type Item = T;
+
+    type IntoIter = IntoIter<T, N>;
+
     /// Consumes the buffer and turns it into an Iterator
     /// that can be used to consume the containing items.
-    pub fn into_iter(self) -> IntoIter<T, N> {
-        IntoIter::new(self)
+    fn into_iter(self) -> Self::IntoIter {
+        IntoIter {buffer: self, current_index: 0}
     }
 }
 
 pub struct IntoIter<T, const N: usize> {
     buffer: Buffer<T, N>,
-}
-
-impl<T, const N: usize> IntoIter<T, N> {
-    fn new(buffer: Buffer<T, N>) -> Self {
-        Self { buffer }
-    }
+    current_index: usize,
 }
 
 impl<T, const N: usize> Iterator for IntoIter<T, N> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let current_index = self.buffer.current_index.borrow_mut();
-
-        if *current_index >= self.buffer.len {
+        if self.current_index >= self.buffer.len {
             return None;
         }
 
-        let value = std::mem::replace(&mut self.buffer.data[*current_index], MaybeUninit::uninit());
-        *current_index += 1;
+        let value = std::mem::replace(
+            &mut self.buffer.data[self.current_index],
+            MaybeUninit::uninit(),
+        );
+        self.current_index += 1;
 
         // SAFETY: current_index is checked to be < len.
         // where len indicate last item that contains a T.
@@ -103,19 +98,13 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
     }
 }
 
-impl<T, const N: usize> Drop for Buffer<T, N> {
+impl<T, const N: usize> Drop for IntoIter<T, N> {
     fn drop(&mut self) {
-        for i in self.current_index..self.len {
-            // SAFETY: buffer keeps track of the current_index.
-            // if current_index > 0 then 0..current_index is
-            // unitialized and should not assume_init_drop().
-            unsafe {
-                self.data[i].assume_init_drop();
-            }
+        while let Some(item) = self.next() {
+            drop(item)
         }
     }
 }
-
 #[derive(Debug, PartialEq, PartialOrd, Ord, Eq)]
 #[non_exhaustive]
 pub enum Error<T> {

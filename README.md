@@ -1,6 +1,6 @@
 # so_buff
 
-Does less things than[Arrayvec](https://docs.rs/arrayvec/latest/arrayvec/)
+Does less things than [Arrayvec](https://docs.rs/arrayvec/latest/arrayvec/), \
 You should probably use Arrayvec instead.
 
 Made for my own use case where i need a buffer that gets passed and then consumed.

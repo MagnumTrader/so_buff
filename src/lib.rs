@@ -10,7 +10,6 @@ pub struct Buffer<T, const N: usize> {
 }
 
 impl<T: Send + 'static, const N: usize> Buffer<T, N> {
-    const ARRAY_REPEAT_VALUE: MaybeUninit<T> = MaybeUninit::uninit();
     /// Returning a new instance of a buffer.
     /// Need to specify type and size.
     ///
@@ -26,7 +25,7 @@ impl<T: Send + 'static, const N: usize> Buffer<T, N> {
     #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         // SAFETY: Filling with unititialized data is Safe (i guess?)
-        let data = [Self::ARRAY_REPEAT_VALUE; N];
+        let data = [const {MaybeUninit::uninit()}; N];
 
         Self { data, len: 0 }
     }

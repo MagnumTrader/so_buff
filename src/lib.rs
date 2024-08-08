@@ -15,8 +15,8 @@ impl<T, const N: usize> Buffer<T, N> {
     /// Need to specify type and size.
     ///
     ///```rust
-    /// // creates a buffer of i32s with a capacity of 10
     /// # use so_buff::Buffer;
+    /// // creates a buffer of i32s with a capacity of 10.
     /// let mut buf: Buffer<i32, 10> = Buffer::new();
     ///
     /// buf.push(1);
@@ -35,6 +35,7 @@ impl<T, const N: usize> Buffer<T, N> {
     ///
     ///```rust
     /// # use so_buff::{Buffer, Error};
+    /// // creates a buffer of i32s with a capacity of 3.
     /// let mut buf = Buffer::<i32, 3>::new();
     ///
     /// let _ = buf.push(1);
@@ -117,9 +118,11 @@ impl<T, const N: usize> Iterator for IntoIter<T, N> {
 
 impl<T, const N: usize> Drop for IntoIter<T, N> {
     fn drop(&mut self) {
-        for index in self.current_index..self.len {
-            unsafe {self.buffer[index].assume_init_drop();}
-        }
+
+        let mut buffer = mem::replace(&mut self.buffer, [const {MaybeUninit::uninit()}; N]);
+        let slice_to_drop = buffer[self.current_index..self.len].as_mut_ptr();
+        let slice = std::ptr::slice_from_raw_parts_mut(slice_to_drop.cast::<T>(), self.len - self.current_index);
+        unsafe {slice.drop_in_place()};
     }
 }
 

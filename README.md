@@ -1,5 +1,8 @@
 # so_buff
 
+Made by me for learning.
+Benches tell me to use a standard Vec.
+
 Does less things than [Arrayvec](https://docs.rs/arrayvec/latest/arrayvec/), \
 You should probably use Arrayvec instead.
 

@@ -121,7 +121,24 @@ impl<T, const N: usize> Drop for IntoIter<T, N> {
 
         let mut buffer = mem::replace(&mut self.buffer, [const {MaybeUninit::uninit()}; N]);
         let slice_to_drop = buffer[self.current_index..self.len].as_mut_ptr();
+
         let slice = std::ptr::slice_from_raw_parts_mut(slice_to_drop.cast::<T>(), self.len - self.current_index);
+
+        // SAFETY: this slice is initialized memory of the remaining buffer.
+        //
+        // Example: iterator len is 5 (index of the last item), buffer len is 6 (one uninit), and we have consumed 2 items.
+        // cur_undex = 2
+        // self.len = 5
+        //
+        // r = already returned from the iterator, and is now MaybeUninit::uninit()
+        // i = initialized memory
+        // u = uninitialized memory
+        //
+        // arrayindex:    0  1  2  3  4  5  
+        // current array [r, r, i, i, i, u]
+        //              start 2 ^     ^ iter len is 5, stops here skipping the last uninitialized slot.
+        // 
+        // This is sound based on the design of the Iterator keeping track of these values.
         unsafe {slice.drop_in_place()};
     }
 }

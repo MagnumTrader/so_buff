@@ -2,7 +2,7 @@
 
 Made by me for learning.\
 Does less things than [Arrayvec](https://docs.rs/arrayvec/latest/arrayvec/), \
-You should probably use Arrayvec instead.
+You should use Arrayvec instead.
 
 Made for my own use case where i need a buffer that gets passed and then consumed.
 No pushing after you have started consuming.
